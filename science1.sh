@@ -1,9 +1,12 @@
 #!/bin/bash
 
+# Enable case-insensitive pattern matching
+shopt -s nocasematch
+
 ask_question() {
   local level=$1
   local questions
-  local answers
+  local correct_answer
   local user_answer
 
   # Define questions and answers for each level
@@ -39,11 +42,12 @@ ask_question() {
     ["What is the second most abundant element in the Earth's crust?"]="Silicon"
   )
 
+  # Assign questions and answers based on the level chosen
   case $level in
-    1) questions=("${!level1_questions[@]}") ;;
-    2) questions=("${!level2_questions[@]}") ;;
-    3) questions=("${!level3_questions[@]}") ;;
-    4) questions=("${!level4_questions[@]}") ;;
+    1) questions=("${!level1_questions[@]}"); declare -n questions_by_level="level1_questions" ;;
+    2) questions=("${!level2_questions[@]}"); declare -n questions_by_level="level2_questions" ;;
+    3) questions=("${!level3_questions[@]}"); declare -n questions_by_level="level3_questions" ;;
+    4) questions=("${!level4_questions[@]}"); declare -n questions_by_level="level4_questions" ;;
     *)
       echo "Invalid level."
       return 1
@@ -51,15 +55,9 @@ ask_question() {
   esac
 
   for question in "${questions[@]}"; do
-    correct_answer="${level1_questions[$question]}"
+    correct_answer="${questions_by_level[$question]}"
 
-    case $level in
-      2) correct_answer="${level2_questions[$question]}" ;;
-      3) correct_answer="${level3_questions[$question]}" ;;
-      4) correct_answer="${level4_questions[$question]}" ;;
-    esac
-
-    read -p "Question: $question " user_answer
+    read -r -p "Question: $question " user_answer
 
     if [[ "$user_answer" == "$correct_answer" ]]; then
       echo "Correct! Well done!"
@@ -79,12 +77,26 @@ main() {
   echo "3. Advanced"
   echo "4. Expert"
 
-  read -p "Enter the level number you want to attempt: " level
+  read -r -p "Enter the level number you want to attempt: " level
+  level=$(echo "$level" | xargs)  # Trim whitespace
+
+  # Debugging output
+  echo "You entered: '$level'"  # Show what was entered
+  echo "Length of input: ${#level}"  # Show length of input for troubleshooting
 
   case $level in
     1|2|3|4)
       echo -e "\nYou have chosen Level $level. You will be asked 5 questions."
-      ask_question $level
+      ask_question "$level"
+      ;;
+    one|two|three|four)
+      # Convert text input to corresponding level number
+      if [[ "$level" == "one" ]]; then level=1; fi
+      if [[ "$level" == "two" ]]; then level=2; fi
+      if [[ "$level" == "three" ]]; then level=3; fi
+      if [[ "$level" == "four" ]]; then level=4; fi
+      echo -e "\nYou have chosen Level $level. You will be asked 5 questions."
+      ask_question "$level"
       ;;
     *)
       echo "Invalid level selected. Exiting."
